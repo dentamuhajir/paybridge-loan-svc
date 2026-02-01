@@ -14,6 +14,11 @@ import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.DayOfWeek;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.Date;
 import java.util.UUID;
 
 @Service
@@ -83,6 +88,8 @@ public class LoanApplicationService {
         BigDecimal totalPayable =
                 loanApplication.getRequestedAmount().add(totalInterest);
 
+        LocalDate disbursementDate = calculateDisbursementDate(loanApplication.getApprovedAt());
+
         Loan loan = Loan.create(
                 loanApplication.getId(),
                 loanApplication.getUserId(),
@@ -91,9 +98,24 @@ public class LoanApplicationService {
                 productTenor.interestRate(),
                 productTenor.tenorMonths(),
                 totalInterest,
-                totalPayable
+                totalPayable,
+                disbursementDate
         );
 
         loanRepository.save(loan);
+    }
+
+    private LocalDate calculateDisbursementDate(Instant approvedAt) {
+        LocalDate approvedDate =
+                approvedAt.atZone(ZoneId.systemDefault()).toLocalDate();
+
+        DayOfWeek day = approvedDate.getDayOfWeek();
+
+        return switch (day) {
+            case FRIDAY -> approvedDate.plusDays(3);   // Fri -> Mon
+            case SATURDAY -> approvedDate.plusDays(2); // Sat -> Mon
+            case SUNDAY -> approvedDate.plusDays(1);   // Sun -> Mon
+            default -> approvedDate.plusDays(1);       // Mon–Thu -> next day
+        };
     }
 }

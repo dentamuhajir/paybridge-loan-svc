@@ -8,6 +8,7 @@ import lombok.Getter;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 
 @Entity
@@ -48,6 +49,9 @@ public class Loan {
     @Column(nullable = false)
     private LoanStatus status;
 
+    @Column(name = "disbursement_date")
+    private LocalDate disbursedDate;
+
     @Column(name = "disbursed_at")
     private Instant disbursedAt;
 
@@ -65,7 +69,8 @@ public class Loan {
             BigDecimal interestRate,
             int tenorMonths,
             BigDecimal totalInterest,
-            BigDecimal totalPayable
+            BigDecimal totalPayable,
+            LocalDate disbursementDate
     ) {
         Loan loan = new Loan();
         loan.id = UUID.randomUUID();
@@ -77,6 +82,7 @@ public class Loan {
         loan.tenorMonths = tenorMonths;
         loan.totalInterest = totalInterest;
         loan.totalPayable = totalPayable;
+        loan.disbursedDate = disbursementDate;
         loan.status = LoanStatus.CREATED;
         loan.createdAt = Instant.now();
         return loan;
