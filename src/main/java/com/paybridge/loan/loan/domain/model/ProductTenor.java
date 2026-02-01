@@ -1,5 +1,7 @@
 package com.paybridge.loan.loan.domain.model;
 
+import com.paybridge.loan.loan.domain.enums.InterestType;
+
 import java.math.BigDecimal;
 import java.util.UUID;
 
@@ -8,5 +10,5 @@ public record ProductTenor(
         int tenorMonths,
         BigDecimal interestRate,
         BigDecimal adminFee,
-        String interestType
+        InterestType interestType
 ) {}

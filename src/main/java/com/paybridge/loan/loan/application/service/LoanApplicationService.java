@@ -1,24 +1,40 @@
 package com.paybridge.loan.loan.application.service;
 
-import com.paybridge.loan.loan.api.dto.response.ApproveLoanApplicationResponse;
 import com.paybridge.loan.loan.application.command.CreateLoanApplicationCommand;
+import com.paybridge.loan.loan.application.port.product.ProductClient;
 import com.paybridge.loan.loan.domain.exception.InvalidLoanApplicationException;
+import com.paybridge.loan.loan.domain.exception.InvalidLoanException;
+import com.paybridge.loan.loan.domain.model.Loan;
 import com.paybridge.loan.loan.domain.model.LoanApplication;
+import com.paybridge.loan.loan.domain.model.ProductTenor;
+import com.paybridge.loan.loan.domain.service.InterestCalculator;
 import com.paybridge.loan.loan.infrastructure.persistence.LoanApplicationRepository;
+import com.paybridge.loan.loan.infrastructure.persistence.LoanRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @Service
 public class LoanApplicationService {
-    private final LoanApplicationRepository repository;
+    private final LoanApplicationRepository loanApplicationRepository;
+    private final LoanRepository loanRepository;
+    private final ProductClient productClient;
+    private final InterestCalculator interestCalculator;
 
-    public LoanApplicationService(LoanApplicationRepository repository) {
-        this.repository = repository;
+    public LoanApplicationService(
+            LoanApplicationRepository loanApplicationRepository,
+            LoanRepository loanRepository,
+            ProductClient productClient,
+            InterestCalculator interestCalculator
+    ) {
+        this.loanApplicationRepository = loanApplicationRepository;
+        this.loanRepository = loanRepository;
+        this.productClient = productClient;
+        this.interestCalculator = interestCalculator;
     }
 
-    @Transactional
     public LoanApplication apply(CreateLoanApplicationCommand command) {
 
         LoanApplication loanApplication = LoanApplication.submit(
@@ -31,17 +47,53 @@ public class LoanApplicationService {
                 command.requestedAmount()
         );
 
-        return repository.save(loanApplication);
+        return loanApplicationRepository.save(loanApplication);
     }
 
     @Transactional
-    public LoanApplication approve(UUID loanId) {
-        LoanApplication loanApplication = repository.findById(loanId)
+    public void approveAndCreateLoan(UUID loanApplicationId) {
+        LoanApplication loanApplication = approve(loanApplicationId);
+        ProductTenor productTenor = productClient.getLoanTenor(loanApplication.getLoanTenorId());
+        createLoan(loanApplication, productTenor);
+    }
+
+    public LoanApplication approve(UUID loanApplicationId) {
+        LoanApplication loanApplication = loanApplicationRepository.findById(loanApplicationId)
                 .orElseThrow(() ->
                         new InvalidLoanApplicationException("Loan application not found")
                 );
         loanApplication.approve();
-        return repository.save(loanApplication);
+        return loanApplicationRepository.save(loanApplication);
     }
 
+    public void createLoan(LoanApplication loanApplication, ProductTenor productTenor){
+        if(loanRepository.existsByLoanApplicationId(loanApplication.getId())) {
+            throw  new InvalidLoanException("Loan already exists for this application");
+        }
+
+        BigDecimal totalInterest =
+                interestCalculator.calculate(
+                        loanApplication.getRequestedAmount(),
+                        productTenor.interestType(),
+                        productTenor.interestRate(),
+                        productTenor.tenorMonths()
+                );
+
+        // total payable = (pokok + bunga)
+        BigDecimal totalPayable =
+                loanApplication.getRequestedAmount().add(totalInterest);
+
+        Loan loan = Loan.create(
+                loanApplication.getId(),
+                loanApplication.getUserId(),
+                loanApplication.getRequestedAmount(),
+                productTenor.interestType(),
+                productTenor.interestRate(),
+                productTenor.tenorMonths(),
+                totalInterest,
+                totalPayable
+        );
+
+        loanRepository.save(loan);
+    }
 }

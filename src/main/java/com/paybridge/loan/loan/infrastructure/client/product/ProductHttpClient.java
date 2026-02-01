@@ -1,6 +1,7 @@
 package com.paybridge.loan.loan.infrastructure.client.product;
 
 import com.paybridge.loan.loan.application.port.product.ProductClient;
+import com.paybridge.loan.loan.domain.enums.InterestType;
 import com.paybridge.loan.loan.domain.model.ProductTenor;
 import com.paybridge.loan.loan.infrastructure.client.product.dto.ProductApiResponse;
 import com.paybridge.loan.loan.infrastructure.client.product.dto.ProductTenorResponse;
@@ -38,17 +39,6 @@ public class ProductHttpClient implements ProductClient {
                                         ProductApiResponse<ProductTenorResponse>>() {})
                         .block(Duration.ofSeconds(5));
 
-
-//        try {
-//            log.info("Calling product service...");
-//            ProductApiResponse<ProductTenorResponse> response = ...
-//            log.info("Response received: {}", response);
-//        } catch (Exception e) {
-//            log.error("WebClient call failed", e);
-//        }
-
-        System.out.println(response);
-
         if (response == null || !response.success()) {
             throw new IllegalStateException("Failed to fetch loan tenor");
         }
@@ -60,7 +50,7 @@ public class ProductHttpClient implements ProductClient {
                 data.tenorMonths(),
                 data.interestRate(),
                 data.adminFee(),
-                data.interestType()
+                InterestType.fromExternal(data.interestType())
         );
     }
 }
