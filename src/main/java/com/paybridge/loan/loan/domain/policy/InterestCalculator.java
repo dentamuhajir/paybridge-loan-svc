@@ -1,4 +1,4 @@
-package com.paybridge.loan.loan.domain.service;
+package com.paybridge.loan.loan.domain.policy;
 
 
 import com.paybridge.loan.loan.domain.enums.InterestType;

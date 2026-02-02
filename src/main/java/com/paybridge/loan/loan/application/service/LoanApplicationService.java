@@ -7,7 +7,8 @@ import com.paybridge.loan.loan.domain.exception.InvalidLoanException;
 import com.paybridge.loan.loan.domain.model.Loan;
 import com.paybridge.loan.loan.domain.model.LoanApplication;
 import com.paybridge.loan.loan.domain.model.ProductTenor;
-import com.paybridge.loan.loan.domain.service.InterestCalculator;
+import com.paybridge.loan.loan.domain.policy.DisbursementDateCalculator;
+import com.paybridge.loan.loan.domain.policy.InterestCalculator;
 import com.paybridge.loan.loan.infrastructure.persistence.LoanApplicationRepository;
 import com.paybridge.loan.loan.infrastructure.persistence.LoanRepository;
 import jakarta.transaction.Transactional;
@@ -18,7 +19,6 @@ import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.util.Date;
 import java.util.UUID;
 
 @Service
@@ -27,17 +27,20 @@ public class LoanApplicationService {
     private final LoanRepository loanRepository;
     private final ProductClient productClient;
     private final InterestCalculator interestCalculator;
+    private final DisbursementDateCalculator disbursementDateCalculator;
 
     public LoanApplicationService(
             LoanApplicationRepository loanApplicationRepository,
             LoanRepository loanRepository,
             ProductClient productClient,
-            InterestCalculator interestCalculator
+            InterestCalculator interestCalculator,
+            DisbursementDateCalculator disbursementDateCalculator
     ) {
         this.loanApplicationRepository = loanApplicationRepository;
         this.loanRepository = loanRepository;
         this.productClient = productClient;
         this.interestCalculator = interestCalculator;
+        this.disbursementDateCalculator = disbursementDateCalculator;
     }
 
     public LoanApplication apply(CreateLoanApplicationCommand command) {
@@ -88,7 +91,7 @@ public class LoanApplicationService {
         BigDecimal totalPayable =
                 loanApplication.getRequestedAmount().add(totalInterest);
 
-        LocalDate disbursementDate = calculateDisbursementDate(loanApplication.getApprovedAt());
+        LocalDate disbursementDate = disbursementDateCalculator.calculate(loanApplication.getApprovedAt());
 
         Loan loan = Loan.create(
                 loanApplication.getId(),
@@ -103,19 +106,5 @@ public class LoanApplicationService {
         );
 
         loanRepository.save(loan);
-    }
-
-    private LocalDate calculateDisbursementDate(Instant approvedAt) {
-        LocalDate approvedDate =
-                approvedAt.atZone(ZoneId.systemDefault()).toLocalDate();
-
-        DayOfWeek day = approvedDate.getDayOfWeek();
-
-        return switch (day) {
-            case FRIDAY -> approvedDate.plusDays(3);   // Fri -> Mon
-            case SATURDAY -> approvedDate.plusDays(2); // Sat -> Mon
-            case SUNDAY -> approvedDate.plusDays(1);   // Sun -> Mon
-            default -> approvedDate.plusDays(1);       // Mon–Thu -> next day
-        };
     }
 }
