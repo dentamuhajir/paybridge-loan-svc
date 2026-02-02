@@ -5,6 +5,7 @@ import com.paybridge.loan.loan.domain.enums.LoanStatus;
 import com.paybridge.loan.loan.domain.exception.InvalidLoanException;
 import jakarta.persistence.*;
 import lombok.Getter;
+import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -13,6 +14,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "loans")
+@Setter
 @Getter
 public class Loan {
 
@@ -50,7 +52,7 @@ public class Loan {
     private LoanStatus status;
 
     @Column(name = "disbursement_date")
-    private LocalDate disbursedDate;
+    private LocalDate disbursementDate;
 
     @Column(name = "disbursed_at")
     private Instant disbursedAt;
@@ -82,7 +84,7 @@ public class Loan {
         loan.tenorMonths = tenorMonths;
         loan.totalInterest = totalInterest;
         loan.totalPayable = totalPayable;
-        loan.disbursedDate = disbursementDate;
+        loan.disbursementDate = disbursementDate;
         loan.status = LoanStatus.CREATED;
         loan.createdAt = Instant.now();
         return loan;

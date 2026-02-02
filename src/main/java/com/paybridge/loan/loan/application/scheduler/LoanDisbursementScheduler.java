@@ -1,5 +1,6 @@
 package com.paybridge.loan.loan.application.scheduler;
 
+import com.paybridge.loan.loan.application.service.LoanDisbursementService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -8,12 +9,18 @@ import org.springframework.stereotype.Component;
 @Component
 public class LoanDisbursementScheduler {
 
+    private final LoanDisbursementService loanDisbursementService;
+
+    public LoanDisbursementScheduler(LoanDisbursementService loanDisbursementService) {
+        this.loanDisbursementService = loanDisbursementService;
+    }
+
     @Scheduled(cron = "0 * * * * ?")
     public void runAutoDisbursement() {
         log.info("[Scheduler] Starting auto disbursement job");
 
         try {
-            // autoDisbursementUseCase.execute();
+            loanDisbursementService.autoDisbursement();
         } catch (Exception e) {
             log.error("[Scheduler] Auto disbursement job failed", e);
         }
