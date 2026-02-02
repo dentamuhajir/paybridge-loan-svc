@@ -15,10 +15,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.time.DayOfWeek;
-import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.UUID;
 
 @Service
@@ -87,10 +84,6 @@ public class LoanApplicationService {
                         productTenor.tenorMonths()
                 );
 
-        // total payable = (pokok + bunga)
-        BigDecimal totalPayable =
-                loanApplication.getRequestedAmount().add(totalInterest);
-
         LocalDate disbursementDate = disbursementDateCalculator.calculate(loanApplication.getApprovedAt());
 
         Loan loan = Loan.create(
@@ -101,7 +94,6 @@ public class LoanApplicationService {
                 productTenor.interestRate(),
                 productTenor.tenorMonths(),
                 totalInterest,
-                totalPayable,
                 disbursementDate
         );
 

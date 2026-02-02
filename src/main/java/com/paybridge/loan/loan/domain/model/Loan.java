@@ -71,7 +71,6 @@ public class Loan {
             BigDecimal interestRate,
             int tenorMonths,
             BigDecimal totalInterest,
-            BigDecimal totalPayable,
             LocalDate disbursementDate
     ) {
         Loan loan = new Loan();
@@ -83,7 +82,7 @@ public class Loan {
         loan.interestRate = interestRate;
         loan.tenorMonths = tenorMonths;
         loan.totalInterest = totalInterest;
-        loan.totalPayable = totalPayable;
+        loan.totalPayable = principalAmount.add(totalInterest);
         loan.disbursementDate = disbursementDate;
         loan.status = LoanStatus.CREATED;
         loan.createdAt = Instant.now();
