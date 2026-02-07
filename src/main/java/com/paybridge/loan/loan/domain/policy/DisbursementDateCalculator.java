@@ -1,10 +1,13 @@
 package com.paybridge.loan.loan.domain.policy;
 
+import org.springframework.stereotype.Component;
+
 import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 
+@Component
 public class DisbursementDateCalculator {
     public LocalDate calculate(Instant approvedAt) {
         LocalDate approvedDate =

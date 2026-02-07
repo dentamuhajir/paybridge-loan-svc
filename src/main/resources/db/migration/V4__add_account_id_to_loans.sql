@@ -1,0 +1,2 @@
+ALTER TABLE loans
+ADD COLUMN account_id UUID NOT NULL;

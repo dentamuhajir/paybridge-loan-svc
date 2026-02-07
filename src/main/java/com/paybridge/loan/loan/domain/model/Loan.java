@@ -57,6 +57,9 @@ public class Loan {
     @Column(name = "disbursed_at")
     private Instant disbursedAt;
 
+    @Column(name = "account_id")
+    private UUID accountId;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -71,7 +74,8 @@ public class Loan {
             BigDecimal interestRate,
             int tenorMonths,
             BigDecimal totalInterest,
-            LocalDate disbursementDate
+            LocalDate disbursementDate,
+            UUID accountId
     ) {
         Loan loan = new Loan();
         loan.id = UUID.randomUUID();
@@ -84,6 +88,7 @@ public class Loan {
         loan.totalInterest = totalInterest;
         loan.totalPayable = principalAmount.add(totalInterest);
         loan.disbursementDate = disbursementDate;
+        loan.accountId = accountId;
         loan.status = LoanStatus.CREATED;
         loan.createdAt = Instant.now();
         return loan;

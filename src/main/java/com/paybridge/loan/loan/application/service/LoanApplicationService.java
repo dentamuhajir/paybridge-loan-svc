@@ -2,8 +2,10 @@ package com.paybridge.loan.loan.application.service;
 
 import com.paybridge.loan.loan.application.command.CreateLoanApplicationCommand;
 import com.paybridge.loan.loan.application.port.product.ProductClient;
+import com.paybridge.loan.loan.application.port.transaction.TransactionClient;
 import com.paybridge.loan.loan.domain.exception.InvalidLoanApplicationException;
 import com.paybridge.loan.loan.domain.exception.InvalidLoanException;
+import com.paybridge.loan.loan.domain.model.Account;
 import com.paybridge.loan.loan.domain.model.Loan;
 import com.paybridge.loan.loan.domain.model.LoanApplication;
 import com.paybridge.loan.loan.domain.model.ProductTenor;
@@ -12,17 +14,19 @@ import com.paybridge.loan.loan.domain.policy.InterestCalculator;
 import com.paybridge.loan.loan.infrastructure.persistence.LoanApplicationRepository;
 import com.paybridge.loan.loan.infrastructure.persistence.LoanRepository;
 import jakarta.transaction.Transactional;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
-
+@Slf4j
 @Service
 public class LoanApplicationService {
     private final LoanApplicationRepository loanApplicationRepository;
     private final LoanRepository loanRepository;
     private final ProductClient productClient;
+    private final TransactionClient transactionClient;
     private final InterestCalculator interestCalculator;
     private final DisbursementDateCalculator disbursementDateCalculator;
 
@@ -30,12 +34,14 @@ public class LoanApplicationService {
             LoanApplicationRepository loanApplicationRepository,
             LoanRepository loanRepository,
             ProductClient productClient,
+            TransactionClient transactionClient,
             InterestCalculator interestCalculator,
             DisbursementDateCalculator disbursementDateCalculator
     ) {
         this.loanApplicationRepository = loanApplicationRepository;
         this.loanRepository = loanRepository;
         this.productClient = productClient;
+        this.transactionClient = transactionClient;
         this.interestCalculator = interestCalculator;
         this.disbursementDateCalculator = disbursementDateCalculator;
     }
@@ -59,7 +65,9 @@ public class LoanApplicationService {
     public void approveAndCreateLoan(UUID loanApplicationId) {
         LoanApplication loanApplication = approve(loanApplicationId);
         ProductTenor productTenor = productClient.getLoanTenor(loanApplication.getLoanTenorId());
-        createLoan(loanApplication, productTenor);
+        Account account = transactionClient.getAccount(loanApplication.getUserId());
+        log.info("[LoanService] Account response: {}", account);
+        createLoan(loanApplication, productTenor, account);
     }
 
     public LoanApplication approve(UUID loanApplicationId) {
@@ -71,7 +79,7 @@ public class LoanApplicationService {
         return loanApplicationRepository.save(loanApplication);
     }
 
-    public void createLoan(LoanApplication loanApplication, ProductTenor productTenor){
+    public void createLoan(LoanApplication loanApplication, ProductTenor productTenor, Account account){
         if(loanRepository.existsByLoanApplicationId(loanApplication.getId())) {
             throw  new InvalidLoanException("Loan already exists for this application");
         }
@@ -94,7 +102,8 @@ public class LoanApplicationService {
                 productTenor.interestRate(),
                 productTenor.tenorMonths(),
                 totalInterest,
-                disbursementDate
+                disbursementDate,
+                account.ownerId()
         );
 
         loanRepository.save(loan);
