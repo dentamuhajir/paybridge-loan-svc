@@ -24,8 +24,8 @@ management:
 
 product:
   service:
-#    base-url: http://localhost:8083
-    base-url: http://host.docker.internal:8083
+    base-url: http://paybridge-product-svc:8083
+    #base-url: http://host.docker.internal:8083
     api-key: f7a3d9e2b1c85a4096e213b764d19a82f35c0e189674bc27d91f4a5e3028c61b
 
 transaction:

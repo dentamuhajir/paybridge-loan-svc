@@ -1,15 +1,21 @@
 package com.paybridge.loan.loan.infrastructure.client.transaction;
 
 import com.paybridge.loan.loan.application.port.transaction.TransactionClient;
+import com.paybridge.loan.loan.domain.exception.InvalidLoanApplicationException;
+import com.paybridge.loan.loan.domain.exception.InvalidLoanException;
 import com.paybridge.loan.loan.domain.model.Account;
 import com.paybridge.loan.loan.infrastructure.client.transaction.dto.TransactionApiResponse;
+import com.paybridge.loan.shared.exception.DependencyUnavailableException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.time.Duration;
 import java.util.UUID;
 
+@Slf4j
 @Configuration
 public class TransactionHttpClient implements TransactionClient {
     private final WebClient webClient;
@@ -26,29 +32,76 @@ public class TransactionHttpClient implements TransactionClient {
     }
 
     @Override
-    public Account getAccount (UUID ownerId){
-        System.out.println("Client Account pass");
-        TransactionApiResponse<Account> response =
-                webClient.get()
-                        .uri(TransactionApiPaths.GET_ACCOUNT_BY_OWNER_ID, ownerId)
-                        .retrieve()
-                        .bodyToMono(
-                                new org.springframework.core.ParameterizedTypeReference<
-                                        TransactionApiResponse<Account>>() {})
-                        .block(Duration.ofSeconds(5));
+    public Account getAccount(UUID ownerId) {
+        log.info("Fetching account for ownerId: {}", ownerId);
 
-        if (response == null || !response.success()) {
-            throw new IllegalStateException("Failed to fetch account");
+        try {
+            TransactionApiResponse<Account> response =
+                    webClient.get()
+                            .uri(TransactionApiPaths.GET_ACCOUNT_BY_OWNER_ID, ownerId)
+                            .retrieve()
+
+                            // 400 -> bad loan request
+                            .onStatus(
+                                    status -> status.value() == 400,
+                                    res -> res.bodyToMono(String.class)
+                                            .map(body ->
+                                                    new InvalidLoanApplicationException(
+                                                            "Invalid loan application"
+                                                    )
+                                            )
+                            )
+
+                            // 404 / 409 -> loan precondition failed
+                            .onStatus(
+                                    status -> status.value() == 404 || status.value() == 409,
+                                    res -> res.bodyToMono(String.class)
+                                            .map(body ->
+                                                    new InvalidLoanException(
+                                                            "Loan precondition failed"
+                                                    )
+                                            )
+                            )
+
+                            // 5xx -> dependency unavailable
+                            .onStatus(
+                                    status -> status.is5xxServerError(),
+                                    res -> res.bodyToMono(String.class)
+                                            .map(body ->
+                                                    new DependencyUnavailableException(
+                                                            "Transaction service unavailable"
+                                                    )
+                                            )
+                            )
+
+                            .bodyToMono(new ParameterizedTypeReference<
+                                                                TransactionApiResponse<Account>>() {})
+                            .block(Duration.ofSeconds(5));
+
+            if (response == null || !response.success()) {
+                throw new DependencyUnavailableException("Invalid response from transaction service");
+            }
+
+            Account data = response.data();
+
+            log.info("Successfully retrieved account data: {}", data);
+
+            return new Account(
+                    data.ownerId(),
+                    data.status()
+            );
+
+        } catch (Exception e) {
+            // LOG THE EXCEPTION HERE
+            log.error("Failed to call Transaction Service for ownerId: {}. Error: {}", ownerId, e.getMessage());
+
+            // Re-throw if it's already our domain exception, otherwise wrap it
+            if (e instanceof InvalidLoanApplicationException || e instanceof InvalidLoanException || e instanceof DependencyUnavailableException) {
+                throw e;
+            }
+            throw new DependencyUnavailableException("Transaction service call failed: " + e.getMessage());
         }
-
-        System.out.println(response.data());
-
-        Account data = response.data();
-
-        return new Account(
-                data.ownerId(),
-                data.status()
-        );
     }
+
 
 }

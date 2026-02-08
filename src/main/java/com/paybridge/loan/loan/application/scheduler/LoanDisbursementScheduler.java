@@ -15,16 +15,16 @@ public class LoanDisbursementScheduler {
         this.loanDisbursementService = loanDisbursementService;
     }
 
-    @Scheduled(cron = "0 * * * * ?")
-    public void runAutoDisbursement() {
-        log.info("[Scheduler] Starting auto disbursement job");
-
-        try {
-            loanDisbursementService.autoDisbursement();
-        } catch (Exception e) {
-            log.error("[Scheduler] Auto disbursement job failed", e);
-        }
-
-        log.info("[Scheduler] Finished auto disbursement job");
-    }
+//    @Scheduled(cron = "0 * * * * ?")
+//    public void runAutoDisbursement() {
+//        log.info("[Scheduler] Starting auto disbursement job");
+//
+//        try {
+//            loanDisbursementService.autoDisbursement();
+//        } catch (Exception e) {
+//            log.error("[Scheduler] Auto disbursement job failed", e);
+//        }
+//
+//        log.info("[Scheduler] Finished auto disbursement job");
+//    }
 }
