@@ -6,6 +6,7 @@ import com.paybridge.loan.loan.domain.exception.InvalidLoanException;
 import com.paybridge.loan.loan.domain.model.Account;
 import com.paybridge.loan.loan.infrastructure.client.transaction.dto.TransactionApiResponse;
 import com.paybridge.loan.shared.exception.DependencyUnavailableException;
+import io.micrometer.observation.ObservationRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
@@ -22,11 +23,13 @@ public class TransactionHttpClient implements TransactionClient {
 
     public TransactionHttpClient(
             WebClient.Builder builder,
+            ObservationRegistry observationRegistry, // 1. Inject ObservationRegistry di sini
             @Value("${transaction.service.base-url}") String baseUrl,
             @Value("${transaction.service.api-key}") String apiKey
     ) {
         this.webClient = builder
                 .baseUrl(baseUrl)
+                .observationRegistry(observationRegistry)
                 .defaultHeader("Authorization", "Bearer " + apiKey)
                 .build();
     }
