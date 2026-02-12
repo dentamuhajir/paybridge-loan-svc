@@ -63,11 +63,30 @@ public class LoanApplicationService {
 
     @Transactional
     public void approveAndCreateLoan(UUID loanApplicationId) {
-        LoanApplication loanApplication = approve(loanApplicationId);
-        ProductTenor productTenor = productClient.getLoanTenor(loanApplication.getLoanTenorId());
-        Account account = transactionClient.getAccount(loanApplication.getUserId());
-        log.info("[LoanService] Account response: {}", account);
-        createLoan(loanApplication, productTenor, account);
+
+        try (var ignored = org.slf4j.MDC.putCloseable(
+                "loan_application_id", loanApplicationId.toString())) {
+
+            log.info("starting loan approval process");
+
+            LoanApplication loanApplication = approve(loanApplicationId);
+
+            log.info("loan application approved");
+
+            ProductTenor productTenor =
+                    productClient.getLoanTenor(loanApplication.getLoanTenorId());
+
+            log.info("product tenor fetched");
+
+            Account account =
+                    transactionClient.getAccount(loanApplication.getUserId());
+
+            log.info("account verified");
+
+            createLoan(loanApplication, productTenor, account);
+
+            log.info("loan successfully created");
+        }
     }
 
     public LoanApplication approve(UUID loanApplicationId) {

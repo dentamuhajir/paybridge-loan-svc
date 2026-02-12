@@ -21,6 +21,15 @@ management:
     web:
       exposure:
         include: health,info
+  tracing:
+    sampling:
+      probability: 1.0
+
+otel:
+  exporter:
+    otlp:
+      endpoint: http://paybridge-otel-collector:4317
+      protocol: grpc
 
 product:
   service:
@@ -37,3 +46,7 @@ logging:
   level:
     org.springframework.web.reactive.function.client.ExchangeFunctions: DEBUG
     reactor.netty.http.client: DEBUG
+#  pattern:
+#    level: "%5p [traceId=%X{traceId:-}, spanId=%X{spanId:-}]"
+
+

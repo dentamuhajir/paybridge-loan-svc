@@ -1,0 +1,27 @@
+<configuration>
+
+    <appender name="STDOUT"
+              class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+
+            <fieldNames>
+                <timestamp>@timestamp</timestamp>
+                <level>level</level>
+                <message>msg</message>
+            </fieldNames>
+
+            <timeZone>UTC</timeZone>
+            <includeCallerData>true</includeCallerData>
+
+            <!-- injected by OTel agent -->
+            <includeMdcKeyName>traceId</includeMdcKeyName>
+            <includeMdcKeyName>spanId</includeMdcKeyName>
+
+        </encoder>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="STDOUT"/>
+    </root>
+
+</configuration>
