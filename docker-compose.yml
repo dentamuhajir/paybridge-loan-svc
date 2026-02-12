@@ -9,7 +9,12 @@ services:
     volumes:
       - .:/app
       - ~/.m2:/root/.m2
-#    environment:
+    environment:
+      OTEL_SERVICE_NAME: paybridge-loan-service
+      OTEL_TRACES_EXPORTER: otlp
+      OTEL_EXPORTER_OTLP_ENDPOINT: paybridge-otel-collector:4317
+      OTEL_METRICS_EXPORTER: none
+      OTEL_LOGS_EXPORTER: none
 #      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
 #      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
 #      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
