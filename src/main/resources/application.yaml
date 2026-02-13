@@ -17,21 +17,21 @@ spring:
     enabled: true
 
 management:
+
   endpoints:
     web:
       exposure:
         include: health,info
+
   tracing:
     sampling:
       probability: 1.0
     propagation:
       type: w3c # Memastikan format header 'traceparent' terkirim ke Go
 
-otel:
-  exporter:
-    otlp:
-      endpoint: http://paybridge-otel-collector:4317
-      protocol: grpc
+  otlp:
+    tracing:
+      endpoint: http://paybridge-otel-collector:4318/v1/traces
 
 product:
   service:
