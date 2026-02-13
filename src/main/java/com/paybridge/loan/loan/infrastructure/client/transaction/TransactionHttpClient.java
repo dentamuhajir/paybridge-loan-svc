@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.util.retry.Retry;
 
 import java.time.Duration;
 import java.util.UUID;
@@ -23,7 +24,7 @@ public class TransactionHttpClient implements TransactionClient {
 
     public TransactionHttpClient(
             WebClient.Builder builder,
-            ObservationRegistry observationRegistry, // 1. Inject ObservationRegistry di sini
+            ObservationRegistry observationRegistry,
             @Value("${transaction.service.base-url}") String baseUrl,
             @Value("${transaction.service.api-key}") String apiKey
     ) {
@@ -79,6 +80,15 @@ public class TransactionHttpClient implements TransactionClient {
 
                             .bodyToMono(new ParameterizedTypeReference<
                                                                 TransactionApiResponse<Account>>() {})
+                            .retryWhen(
+                                    Retry.backoff(3, Duration.ofMillis(500))  // 3 retries
+                                            .maxBackoff(Duration.ofSeconds(2))
+                                            .filter(this::isRetryableError)
+                                            .onRetryExhaustedThrow((spec, signal) ->
+                                                    new DependencyUnavailableException("Transaction service retry exhausted")
+                                            )
+                            )
+
                             .block(Duration.ofSeconds(5));
 
             if (response == null || !response.success()) {
@@ -106,5 +116,12 @@ public class TransactionHttpClient implements TransactionClient {
         }
     }
 
-
+    private boolean isRetryableError(Throwable throwable) {
+        if (throwable instanceof InvalidLoanApplicationException) return false;
+        if (throwable instanceof InvalidLoanException) return false;
+        if (throwable instanceof DependencyUnavailableException) return true;
+        if (throwable instanceof java.util.concurrent.TimeoutException) return true;
+        if (throwable instanceof org.springframework.web.reactive.function.client.WebClientRequestException) return true;
+        return false;
+    }
 }
