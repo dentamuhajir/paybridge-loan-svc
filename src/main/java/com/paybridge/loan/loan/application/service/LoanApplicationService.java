@@ -22,9 +22,11 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
+
 @Slf4j
 @Service
 public class LoanApplicationService {
+
     private final LoanApplicationRepository loanApplicationRepository;
     private final LoanRepository loanRepository;
     private final ProductClient productClient;
@@ -63,7 +65,6 @@ public class LoanApplicationService {
         return loanApplicationRepository.save(loanApplication);
     }
 
-    @Transactional
     public void approveAndCreateLoan(UUID loanApplicationId) {
 
         Span span = Span.current();
@@ -74,9 +75,10 @@ public class LoanApplicationService {
             span.setAttribute("loan.application.id", loanApplicationId.toString());
             log.info("starting loan approval process");
 
-            LoanApplication loanApplication = approve(loanApplicationId);
-
-            log.info("loan application approved");
+            LoanApplication loanApplication = loanApplicationRepository.findById(loanApplicationId)
+                    .orElseThrow(() ->
+                            new InvalidLoanApplicationException("Loan application not found")
+                    );
 
             ProductTenor productTenor =
                     productClient.getLoanTenor(loanApplication.getLoanTenorId());
@@ -88,7 +90,7 @@ public class LoanApplicationService {
 
             log.info("account verified");
 
-            createLoan(loanApplication, productTenor, account);
+            approveAndCreateTransactional(loanApplicationId, productTenor, account);
 
             log.info("loan successfully created");
         } catch (Exception e) {
@@ -97,23 +99,26 @@ public class LoanApplicationService {
             span.setStatus(StatusCode.ERROR, e.getMessage());
 
             log.error("loan approval failed", e);
-
             throw e;
         }
     }
 
-    public LoanApplication approve(UUID loanApplicationId) {
+    @Transactional
+    protected void approveAndCreateTransactional(
+            UUID loanApplicationId,
+            ProductTenor productTenor,
+            Account account
+    ) {
+
         LoanApplication loanApplication = loanApplicationRepository.findById(loanApplicationId)
                 .orElseThrow(() ->
                         new InvalidLoanApplicationException("Loan application not found")
                 );
-        loanApplication.approve();
-        return loanApplicationRepository.save(loanApplication);
-    }
 
-    public void createLoan(LoanApplication loanApplication, ProductTenor productTenor, Account account){
-        if(loanRepository.existsByLoanApplicationId(loanApplication.getId())) {
-            throw  new InvalidLoanException("Loan already exists for this application");
+        loanApplication.approve();
+
+        if (loanRepository.existsByLoanApplicationId(loanApplication.getId())) {
+            throw new InvalidLoanException("Loan already exists for this application");
         }
 
         BigDecimal totalInterest =
@@ -124,7 +129,8 @@ public class LoanApplicationService {
                         productTenor.tenorMonths()
                 );
 
-        LocalDate disbursementDate = disbursementDateCalculator.calculate(loanApplication.getApprovedAt());
+        LocalDate disbursementDate =
+                disbursementDateCalculator.calculate(loanApplication.getApprovedAt());
 
         Loan loan = Loan.create(
                 loanApplication.getId(),
