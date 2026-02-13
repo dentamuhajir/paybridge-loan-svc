@@ -13,6 +13,8 @@ import com.paybridge.loan.loan.domain.policy.DisbursementDateCalculator;
 import com.paybridge.loan.loan.domain.policy.InterestCalculator;
 import com.paybridge.loan.loan.infrastructure.persistence.LoanApplicationRepository;
 import com.paybridge.loan.loan.infrastructure.persistence.LoanRepository;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.StatusCode;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -64,9 +66,12 @@ public class LoanApplicationService {
     @Transactional
     public void approveAndCreateLoan(UUID loanApplicationId) {
 
+        Span span = Span.current();
+
         try (var ignored = org.slf4j.MDC.putCloseable(
                 "loan_application_id", loanApplicationId.toString())) {
 
+            span.setAttribute("loan.application.id", loanApplicationId.toString());
             log.info("starting loan approval process");
 
             LoanApplication loanApplication = approve(loanApplicationId);
@@ -86,6 +91,14 @@ public class LoanApplicationService {
             createLoan(loanApplication, productTenor, account);
 
             log.info("loan successfully created");
+        } catch (Exception e) {
+
+            span.recordException(e);
+            span.setStatus(StatusCode.ERROR, e.getMessage());
+
+            log.error("loan approval failed", e);
+
+            throw e;
         }
     }
 
