@@ -21,17 +21,25 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,metrics
 
   tracing:
     sampling:
       probability: 1.0
     propagation:
-      type: w3c # Memastikan format header 'traceparent' terkirim ke Go
+      type: w3c
 
   otlp:
     tracing:
       endpoint: http://paybridge-otel-collector:4318/v1/traces
+
+  endpoint:
+    health:
+      show-details: always
+
+  health:
+    circuitbreakers:
+      enabled: true
 
 product:
   service:
