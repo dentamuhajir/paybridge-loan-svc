@@ -5,6 +5,7 @@ import com.paybridge.loan.loan.domain.enums.InterestType;
 import com.paybridge.loan.loan.domain.model.ProductTenor;
 import com.paybridge.loan.loan.infrastructure.client.product.dto.ProductApiResponse;
 import com.paybridge.loan.loan.infrastructure.client.product.dto.ProductTenorResponse;
+import io.micrometer.observation.ObservationRegistry;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -18,11 +19,13 @@ public class ProductHttpClient implements ProductClient {
 
     public ProductHttpClient(
             WebClient.Builder builder,
+            ObservationRegistry observationRegistry,
             @Value("${product.service.base-url}") String baseUrl,
             @Value("${product.service.api-key}") String apiKey
     ) {
         this.webClient = builder
                 .baseUrl(baseUrl)
+                .observationRegistry(observationRegistry)
                 .defaultHeader("Authorization", "Bearer " + apiKey)
                 .build();
     }
