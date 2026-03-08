@@ -6,6 +6,7 @@ import com.paybridge.loan.loan.domain.model.ProductTenor;
 import com.paybridge.loan.loan.infrastructure.client.product.dto.ProductApiResponse;
 import com.paybridge.loan.loan.infrastructure.client.product.dto.ProductTenorResponse;
 import io.micrometer.observation.ObservationRegistry;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -13,6 +14,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import java.time.Duration;
 import java.util.UUID;
 
+@Slf4j
 @Configuration
 public class ProductHttpClient implements ProductClient {
     private final WebClient webClient;
@@ -32,7 +34,7 @@ public class ProductHttpClient implements ProductClient {
 
     @Override
     public ProductTenor getLoanTenor(UUID tenorId){
-        System.out.println("pass to client ");
+        log.info("Get loan tenor ID {}", tenorId);
         ProductApiResponse<ProductTenorResponse> response =
                 webClient.get()
                         .uri(ProductApiPaths.LOAN_TENOR_BY_ID, tenorId)
@@ -43,10 +45,13 @@ public class ProductHttpClient implements ProductClient {
                         .block(Duration.ofSeconds(5));
 
         if (response == null || !response.success()) {
+            log.info("Failed to fetch loan tenor {}", tenorId);
             throw new IllegalStateException("Failed to fetch loan tenor");
         }
 
         ProductTenorResponse data = response.data();
+
+        log.info("Product Tenor Response {}", data);
 
         return new ProductTenor(
                 data.tenorId(),
