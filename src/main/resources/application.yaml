@@ -59,4 +59,15 @@ logging:
 #  pattern:
 #    level: "%5p [traceId=%X{traceId:-}, spanId=%X{spanId:-}]"
 
-
+resilience4j:
+  circuitbreaker:
+    instances:
+      transactionService:
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        failureRateThreshold: 50
+        waitDurationInOpenState: 30s
+  timelimiter:
+    instances:
+      productService:
+        timeoutDuration: 3s
