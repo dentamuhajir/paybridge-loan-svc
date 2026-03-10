@@ -2,7 +2,6 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_HUB_CREDENTIALS = credentials('dockerhub-credentials')
         IMAGE_NAME = "dentamuhajir/paybridge-loan-svc"
         IMAGE_TAG = "${BUILD_NUMBER}"
     }
@@ -40,26 +39,48 @@ pipeline {
         // ================================
         stage('Push to Docker Hub') {
             steps {
-                echo "======== Pushing Image to Docker Hub ========"
-                sh "echo ${DOCKER_HUB_CREDENTIALS_PSW} | docker login -u ${DOCKER_HUB_CREDENTIALS_USR} --password-stdin"
-                sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
-                sh "docker push ${IMAGE_NAME}:latest"
+                echo "======== Logging into Docker Hub ========"
+
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-credentials',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+
+                    sh """
+                        echo \$DOCKER_PASS | docker login -u \$DOCKER_USER --password-stdin
+                    """
+
+                    echo "======== Pushing Image to Docker Hub ========"
+
+                    retry(3) {
+                        sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
+                        sh "docker push ${IMAGE_NAME}:latest"
+                    }
+                }
+
                 echo "======== Image pushed: ${IMAGE_NAME}:${IMAGE_TAG} ========"
             }
         }
-
     }
 
     post {
         success {
             echo "CI Successful!"
-            echo "Image available at: https://hub.docker.com/r/dentamuhajir/paybridge-loan-svc"
-            echo "Tags pushed: ${IMAGE_NAME}:${IMAGE_TAG} and ${IMAGE_NAME}:latest"
+            echo "Image available at:"
+            echo "https://hub.docker.com/r/dentamuhajir/paybridge-loan-svc"
+            echo "Tags pushed:"
+            echo "${IMAGE_NAME}:${IMAGE_TAG}"
+            echo "${IMAGE_NAME}:latest"
         }
+
         failure {
             echo "CI Failed! Check build logs above."
         }
+
         always {
+            echo "Cleaning up local Docker images..."
+
             sh "docker rmi ${IMAGE_NAME}:${IMAGE_TAG} || true"
             sh "docker rmi ${IMAGE_NAME}:latest || true"
             sh "docker logout || true"
