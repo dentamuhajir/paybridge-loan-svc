@@ -1,63 +1,55 @@
 server:
   port: 8084
+
 spring:
   application:
     name: paybridge-loan-service
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://paybridge-postgres:5432/paybridge_loan}
-    username: ${SPRING_DATASOURCE_USERNAME:dentamuhajir}
-    password: ${SPRING_DATASOURCE_PASSWORD:5MbVqyTEZ42wFS4as9iwZ7}
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
       ddl-auto: validate
     open-in-view: false
-
   flyway:
     enabled: true
 
 management:
-
   endpoints:
     web:
       exposure:
         include: health,info,metrics
-
   tracing:
     sampling:
       probability: 1.0
     propagation:
       type: w3c
-
   otlp:
     tracing:
-      endpoint: http://paybridge-otel-collector:4318/v1/traces
-
+      endpoint: ${MANAGEMENT_OTLP_TRACING_ENDPOINT:http://paybridge-otel-collector:4318/v1/traces}
   endpoint:
     health:
       show-details: always
-
   health:
     circuitbreakers:
       enabled: true
 
 product:
   service:
-    base-url: http://paybridge-product-svc:8083
-    #base-url: http://host.docker.internal:8083
-    api-key: f7a3d9e2b1c85a4096e213b764d19a82f35c0e189674bc27d91f4a5e3028c61b
+    base-url: ${PRODUCT_SERVICE_BASE_URL:http://paybridge-product-svc:8083}
+    api-key: ${TOKEN_PRODUCT_SERVICE}
 
 transaction:
   service:
-    base-url: http://paybridge-transaction-svc:8082
-    api-key: c9d44f1802afef391a0c847fb3bf6967c77a9f0f0ac12c29dfe651eac9442c52
+    base-url: ${TRANSACTION_SERVICE_BASE_URL:http://paybridge-transaction-svc:8082}
+    api-key: ${TOKEN_TRANSACTION_SERVICE}
 
 logging:
   level:
     org.springframework.web.reactive.function.client.ExchangeFunctions: DEBUG
     reactor.netty.http.client: DEBUG
-#  pattern:
-#    level: "%5p [traceId=%X{traceId:-}, spanId=%X{spanId:-}]"
 
 resilience4j:
   circuitbreaker:
